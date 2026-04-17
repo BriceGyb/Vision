@@ -1,0 +1,33 @@
+# Dataset (ne jamais commiter les données médicales)
+*.nii
+*.nii.gz
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Modèles et checkpoints (trop lourds pour GitHub)
+*.pth
+*.pt
+*.ckpt
+checkpoints/
+outputs/
+runs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# PDF (optionnel)
+*.pdf
+
+# OS
+.DS_Store
+Thumbs.db

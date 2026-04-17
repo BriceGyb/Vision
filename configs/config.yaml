@@ -1,0 +1,101 @@
+# ============================================================
+# SE-RES-CNN 3D — BraTS-Africa Configuration
+# Auteur: Brice Gyebre | MSc Informatique, UQAC | 2026
+# ============================================================
+
+# --- Dataset ---
+data:
+  root_dir: "./data/brats_africa"          # Dossier racine du dataset
+  train_split: 0.70
+  val_split: 0.10
+  test_split: 0.20
+  modalities: ["t1n", "t1c", "t2w", "t2f"]  # T1, T1-contrasté, T2, T2-FLAIR
+  labels:
+    background: 0
+    necrotic_core: 1         # NCR — Necrotic Tumor Core
+    edema: 2                 # ED — Peritumoral Edema
+    enhancing_tumor: 3       # ET — GD-Enhancing Tumor
+  # Régions BraTS standards (combinaisons de labels)
+  regions:
+    whole_tumor: [1, 2, 3]   # WT
+    tumor_core: [1, 3]       # TC
+    enhancing_tumor: [3]     # ET
+
+# --- Prétraitement ---
+preprocessing:
+  patch_size: [128, 128, 128]    # Standard BraTS — patches aléatoires
+  normalization: "zscore"         # Z-score par modalité et par cas
+  num_workers: 4
+
+# --- Data Augmentation (TorchIO) ---
+augmentation:
+  random_flip:
+    axes: [0, 1, 2]
+    flip_probability: 0.5
+  random_affine:
+    scales: [0.9, 1.1]
+    degrees: 15
+    probability: 0.5
+  random_noise:
+    mean: 0.0
+    std: [0, 0.1]
+    probability: 0.3
+  random_bias_field:
+    coefficients: 0.5
+    probability: 0.3
+
+# --- Architecture SE-RES-CNN 3D ---
+model:
+  name: "SE_RES_CNN_3D"
+  in_channels: 4                  # 4 modalités IRM
+  num_classes: 3                  # ET, TC, WT (segmentation multi-label)
+  encoder_channels: [32, 64, 128] # Canaux par niveau encoder
+  bottleneck_channels: 256
+  se_reduction: 16                # Ratio réduction module SE (C/16)
+  dropout: 0.1
+
+# --- Entraînement ---
+training:
+  seed: 42
+  epochs: 200
+  batch_size: 2                   # IRM 3D lourdes — batch petit
+  optimizer:
+    name: "AdamW"
+    lr: 1.0e-4
+    weight_decay: 1.0e-5
+  scheduler:
+    name: "CosineAnnealingLR"
+    T_max: 200
+    eta_min: 1.0e-6
+  loss:
+    dice_weight: 0.5
+    ce_weight: 0.5
+  early_stopping:
+    patience: 30
+    monitor: "val_dice"
+  gradient_clip: 1.0
+  amp: true                       # Mixed precision (économise mémoire GPU)
+
+# --- Validation croisée ---
+cross_validation:
+  n_folds: 5                      # K-fold — crucial avec 146 cas
+  stratified: false
+
+# --- Évaluation ---
+evaluation:
+  metrics: ["dice", "hd95", "sensitivity", "specificity"]
+  regions: ["whole_tumor", "tumor_core", "enhancing_tumor"]
+
+# --- Logging (Weights & Biases) ---
+logging:
+  project: "SE-RES-CNN-BraTS-Africa"
+  entity: "brice-gyebre-uqac"
+  log_interval: 10               # Log toutes les N epochs
+  save_best_only: true
+
+# --- Paths ---
+paths:
+  checkpoints: "./checkpoints"
+  results: "./results"
+  figures: "./figures"
+  logs: "./logs"
